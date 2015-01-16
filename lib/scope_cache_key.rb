@@ -1,8 +1,8 @@
 require "scope_cache_key/version"
 
 # Add support for passing models and scopes as cache keys.
-# The cache key will include the md5 digest of the ids and
-# timestamps. Any modification to the group of records will
+# The cache key will include the md5 digest of the primary keys
+# and timestamps. Any modification to the group of records will
 # generate a new key.
 #
 # Eg.:
@@ -17,9 +17,11 @@ module ScopeCacheKey
   #   Item.active.cache_key # => "0b27dac757428d88c0f3a0298eb0278e"
   #
   def cache_key
-    scope_sql = where(nil).select("#{table_name}.id, #{table_name}.updated_at").to_sql
+    scope_sql = where(nil).select(
+      "#{table_name}.#{primary_key} as pk, #{table_name}.updated_at"
+    ).to_sql
 
-    sql = "SELECT md5(array_agg(id || '-' || updated_at)::text) " +
+    sql = "SELECT md5(array_agg(pk || '-' || updated_at)::text) " +
           "FROM (#{scope_sql}) as query"
 
     md5 = connection.select_value(sql, nil, where(nil).bind_values)
